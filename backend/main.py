@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 import os
 import io
 import re
-from urllib.parse import unquote
+from urllib.parse import unquote, quote
 import feedparser
 import httpx
 from dotenv import load_dotenv
@@ -120,7 +121,7 @@ async def list_sources():
 
 
 @app.get("/api/episodes")
-async def list_episodes(source_id: str):
+async def list_episodes(source_id: str, request: Request):
     if source_id not in RSS_SOURCES:
         raise HTTPException(status_code=404, detail="알 수 없는 소스 ID 입니다.")
 
@@ -151,12 +152,16 @@ async def list_episodes(source_id: str):
             if audio_url.startswith("http://"):
                 audio_url = "https://" + audio_url[len("http://"):]
 
+            # 변경 이유: 최종 리다이렉트가 http로 떨어지는 BBC 오디오를 백엔드 https 프록시로 우회
+            base_url = str(request.base_url).rstrip("/")
+            proxied_audio_url = f"{base_url}/api/audio-proxy?url={quote(audio_url, safe='')}"
+
             episodes.append(
                 Episode(
                     id=getattr(entry, "id", getattr(entry, "guid", entry.link)),
                     title=entry.title,
                     description=getattr(entry, "summary", ""),
-                    audio_url=audio_url,
+                    audio_url=proxied_audio_url,
                     published=getattr(entry, "published", None),
                 )
             )
@@ -164,6 +169,32 @@ async def list_episodes(source_id: str):
         return episodes
 
     raise HTTPException(status_code=500, detail="지원하지 않는 소스 모드입니다.")
+
+
+@app.get("/api/audio-proxy")
+async def audio_proxy(url: str, request: Request):
+    """외부 오디오를 HTTPS API 경유로 전달."""
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; LearnCast/1.0)",
+    }
+    range_header = request.headers.get("range")
+    if range_header:
+        headers["Range"] = range_header
+
+    timeout = httpx.Timeout(60.0, connect=10.0)
+    async with httpx.AsyncClient(timeout=timeout, follow_redirects=True, headers=headers) as client_http:
+        try:
+            resp = await client_http.get(url)
+        except httpx.HTTPError as e:
+            raise HTTPException(status_code=502, detail=f"오디오 프록시 요청 실패: {e}") from e
+
+    passthrough_headers = {}
+    for key in ["content-type", "content-length", "content-range", "accept-ranges", "cache-control"]:
+        val = resp.headers.get(key)
+        if val:
+            passthrough_headers[key] = val
+
+    return Response(content=resp.content, status_code=resp.status_code, headers=passthrough_headers)
 
 
 def guess_ext_from_url(url: str) -> str:
