@@ -147,6 +147,10 @@ async def list_episodes(source_id: str):
             if not audio_url:
                 continue
 
+            # 변경 이유: 배포(https) 환경에서 mixed content 차단을 피하려고 오디오 URL을 https로 정규화
+            if audio_url.startswith("http://"):
+                audio_url = "https://" + audio_url[len("http://"):]
+
             episodes.append(
                 Episode(
                     id=getattr(entry, "id", getattr(entry, "guid", entry.link)),
