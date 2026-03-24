@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LearnCast</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="./styles.css" />
+    <!-- 변경 이유: Windows에 설치된 D2Coding과 동일 스택을 우선 사용 (로컬 폰트) -->
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- React 18 UMD 빌드 로드 -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- JSX 변환용 Babel (브라우저에서 바로 JSX 사용) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- JSX가 포함된 스크립트이므로 type="text/babel" -->
+    <script type="text/babel" src="./app.js"></script>
+  </body>
+</html>
+

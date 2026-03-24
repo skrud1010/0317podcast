@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+feedparser
+python-dotenv
+openai>=1.0.0
