@@ -2,7 +2,7 @@
 const { useState, useEffect, useMemo } = React;
 
 // 변경 이유: 로컬/배포(Vercel+Railway) 환경에서 API 주소를 자동으로 분기
-const PROD_API_BASE = "https://YOUR-RAILWAY-APP.up.railway.app";
+const PROD_API_BASE = "https://0317podcast-production.up.railway.app";
 const API_BASE =
   window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:8000"
